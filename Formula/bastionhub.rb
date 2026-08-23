@@ -1,5 +1,5 @@
 class Bastionhub < Formula
-  desc "Self-hosted SSH bastion + reverse-tunnel substrate (pairs with sshca)"
+  desc "SSH bastion and reverse-tunnel manager"
   homepage "https://github.com/roselabs-io/bastionhub"
   version "0.1.0"
   license "MIT"

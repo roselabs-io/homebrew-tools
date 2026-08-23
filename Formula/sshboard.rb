@@ -1,5 +1,5 @@
 class Sshboard < Formula
-  desc "Operator console for sshca + bastionhub (HTMX + Go)"
+  desc "Web interface over sshca and bastionhub"
   homepage "https://github.com/roselabs-io/sshboard"
   version "0.1.0"
   license "MIT"
