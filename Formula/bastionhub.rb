@@ -1,26 +1,26 @@
 class Bastionhub < Formula
   desc "SSH bastion and reverse-tunnel manager"
   homepage "https://github.com/roselabs-io/bastionhub"
-  version "0.1.0"
+  version "0.2.0"
   license "MIT"
 
   on_macos do
     if Hardware::CPU.arm?
-      url "https://github.com/roselabs-io/bastionhub/releases/download/v0.1.0/bastionhub-v0.1.0-darwin-arm64.tar.gz"
-      sha256 "78efe96e5a509c67be95b89fb83fd9ca8498afa9c40d82b172871b85592609ed"
+      url "https://github.com/roselabs-io/bastionhub/releases/download/v0.2.0/bastionhub-v0.2.0-darwin-arm64.tar.gz"
+      sha256 "82e1a21fef35c135e68c75a5d53ac3c8043dbe6d91947086486cc9710883414b"
     else
-      url "https://github.com/roselabs-io/bastionhub/releases/download/v0.1.0/bastionhub-v0.1.0-darwin-amd64.tar.gz"
-      sha256 "b10cc5bb16ccaacef930ea2a407398cdcc5b5fbfe0b4374d5613ce4ba96f0cea"
+      url "https://github.com/roselabs-io/bastionhub/releases/download/v0.2.0/bastionhub-v0.2.0-darwin-amd64.tar.gz"
+      sha256 "6d612581431e33c2c0982422b67b79813f4a9af31f45629bbfe2097dbf2dfd74"
     end
   end
 
   on_linux do
     if Hardware::CPU.arm?
-      url "https://github.com/roselabs-io/bastionhub/releases/download/v0.1.0/bastionhub-v0.1.0-linux-arm64.tar.gz"
-      sha256 "19d9d70d07b75b637f38e70423c097abd9575d858374b3cc8fb281900989cbae"
+      url "https://github.com/roselabs-io/bastionhub/releases/download/v0.2.0/bastionhub-v0.2.0-linux-arm64.tar.gz"
+      sha256 "936880adf5907f6115f912d940542ada8ca0679b3b1b48bc0a1b10aec987d5e8"
     else
-      url "https://github.com/roselabs-io/bastionhub/releases/download/v0.1.0/bastionhub-v0.1.0-linux-amd64.tar.gz"
-      sha256 "59114552a6a0cde1f9383c256a342b791b465b229b9d4fc35651cd8d25000a25"
+      url "https://github.com/roselabs-io/bastionhub/releases/download/v0.2.0/bastionhub-v0.2.0-linux-amd64.tar.gz"
+      sha256 "5700ea080a1a4c695e1d10d45361176c785843bfa5131fc724f4a7d3d5a81dd5"
     end
   end
 
