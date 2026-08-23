@@ -6,6 +6,7 @@ Homebrew tap for Roselabs tools.
 
 ```sh
 brew tap roselabs-io/tools
+brew trust roselabs-io/tools   # recent Homebrew refuses third-party taps otherwise
 brew install sshca       # SSH certificate authority and management CLI
 brew install bastionhub  # SSH bastion and reverse-tunnel manager
 brew install sshboard    # Web interface over sshca and bastionhub
