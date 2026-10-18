@@ -36,10 +36,34 @@ from each tool's GitHub Releases page.
 
 ## Updating formulae
 
-When a new release is tagged in a tool's repo, the formula here gets a corresponding update:
+### From a release event
 
-1. Fetch the new release's `checksums.txt` from `https://github.com/roselabs-io/<tool>/releases/download/v<X.Y.Z>/checksums.txt`
-2. Update the four `url` lines (one per platform) and the four `sha256` lines in `Formula/<tool>.rb`; Homebrew reads the version from the `url`
-3. Run `just checksums` (compares the `sha256` lines with each release's `checksums.txt`) and `just gate` (the `url` and `sha256` line check, `brew style`, `brew audit --strict`), then open a pull request
+The workflow `.github/workflows/homebrewtools-formula.yml` runs on a `repository_dispatch` event of type
+`formula-update`:
 
-Not currently automated.
+```sh
+gh api repos/roselabs-io/homebrew-tools/dispatches \
+  -f event_type=formula-update -F 'client_payload[tool]=sshca' -F 'client_payload[tag]=v0.2.0'
+```
+
+1. `tools/formula_update.py <tool> <tag>` downloads `https://github.com/roselabs-io/<tool>/releases/download/<tag>/checksums.txt`
+   and rewrites the four `url` lines and the four `sha256` lines of `Formula/<tool>.rb`; Homebrew reads the version from the `url`
+2. The job commits the formula on the branch `formula/<tool>-<tag>` and opens a pull request into `main`
+
+| Condition | Result |
+|---|---|
+| `tool` is not a formula of `Formula/` | the job fails |
+| `tag` is not `v<X.Y.Z>` (a prerelease tag) | the job fails |
+| `checksums.txt` lacks one of the four `.tar.gz` archives, or does not exist | the job fails; the formula is not written |
+| the formula is already at the tag | no pull request |
+| the branch `formula/<tool>-<tag>` exists | the push fails |
+
+The token that sends the event needs write access to this repository's contents. The pull request is
+not merged automatically. It is opened with the workflow's `GITHUB_TOKEN`, and GitHub starts no
+workflow for an event of that token: `homebrewtools-ci.yml` runs on the pull request once a person
+closes and reopens it.
+
+### By hand
+
+1. Run `python3 tools/formula_update.py <tool> v<X.Y.Z>`, or fetch the release's `checksums.txt` and update the four `url` lines and the four `sha256` lines of `Formula/<tool>.rb`
+2. Run `just checksums` (compares the `sha256` lines with each release's `checksums.txt`) and `just gate` (the `url` and `sha256` line check, `brew style`, `brew audit --strict`), then open a pull request
