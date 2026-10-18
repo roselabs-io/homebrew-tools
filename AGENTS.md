@@ -13,7 +13,7 @@ the tap's default branch. The rules for the formulae and their update are in Gov
 |---|---|
 | `Formula/sshca.rb`, `Formula/bastionhub.rb`, `Formula/sshboard.rb` | one formula per CLI: `desc`, `homepage`, `license`, one `url` and one `sha256` per platform (macOS and Linux, amd64 and arm64), `depends_on`, `install`, and a `test do` that runs `<tool> --version` |
 | `README.md` | install, platforms, the tools, the manual formula update |
-| `.secrets.baseline` | the detect-secrets findings `just secrets` accepts: the twelve `sha256` values of the formulae |
+| `.secrets.baseline` | the detect-secrets findings `just secrets` accepts: the twelve `sha256` values of the formulae, and sixteen `Secret Keyword` findings on the lines of the `secrets` recipe body in `justfile` |
 | `.github/workflows/homebrewtools-ci.yml` | `validate` (PR metadata) and `gate` (`just gate`) |
 | `.github/workflows/homebrewtools-pm.yml` | the issue and board sync of Governor |
 | `pipeline.yaml` | the Governor dispatcher's config for this repository |
@@ -68,6 +68,11 @@ detect-secrets scan --no-verify --exclude-files '^\.secrets\.baseline$' > .secre
 and the diff of the baseline is reviewed. The detectors are detect-secrets' patterns and entropy
 rules, so a secret of an unknown format with low entropy is not found. Untracked files and Git
 history are not scanned.
+
+detect-secrets' keyword detector reads the `secrets:` recipe header of `justfile` as a keyword and
+each line of the recipe body as its value, so each body line is a finding the baseline holds. A new
+or edited line of that recipe is a new finding: a change to the recipe regenerates the baseline as a
+version change does.
 
 The gate does not download the archives or `checksums.txt`: a `sha256` that does not match the
 release is found by `just checksums` or when `brew install` fetches the archive.
