@@ -44,8 +44,9 @@ with-tap command:
 # Style check of the formulae.
 check: (with-tap "style")
 
-# `brew audit --strict` of each formula of this checkout.
-test: (with-tap "audit --strict --tap")
+# Self-check of tools/formula_check.py, then `brew audit --strict` of each formula of this checkout.
+test: && (with-tap "audit --strict --tap")
+    python3 -B -m unittest discover -s tools -p 'test_*.py'
 
 # The deterministic gate CI runs.
 gate: formulae check test

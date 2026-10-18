@@ -18,6 +18,7 @@ the tap's default branch. The rules for the formulae and their update are in Gov
 | `pipeline.yaml` | the Governor dispatcher's config for this repository |
 | `tools/local_preflight.py` | the local check the dispatcher runs: `just check`, then `just gate` |
 | `tools/formula_check.py` | the check of each formula's `url` and `sha256` lines that `just formulae` and `just checksums` run |
+| `tools/test_formula_check.py` | the self-check of `tools/formula_check.py` that `just test` runs: a valid formula has no finding, each malformed one has one |
 
 A formula has no `version` line: `brew audit --strict` reports it as redundant, and Homebrew reads
 the version from the `url` (`.../download/v<version>/<tool>-v<version>-<os>-<arch>.tar.gz`). A
@@ -30,7 +31,7 @@ version change edits the four `url` lines and the four `sha256` lines.
 | `just formulae` | `tools/formula_check.py`, offline: each formula has four `url` lines of one version covering darwin and linux, amd64 and arm64, each followed by a `sha256` line of 64 lowercase hex characters |
 | `just checksums` | `formulae`, then compares each `sha256` with the release's `checksums.txt`; downloads it, so it is not part of the gate |
 | `just check` | `brew style` of the checkout's tap |
-| `just test` | `brew audit --strict` of each formula of the checkout |
+| `just test` | `tools/test_formula_check.py`, the self-check of `tools/formula_check.py`, then `brew audit --strict` of each formula of the checkout |
 | `just gate` | `formulae`, `check`, then `test`; the deterministic gate CI runs |
 | `just fix` | `brew style --fix` of the checkout's tap |
 | `just ff` | switches to `main` and fast-forwards it from `origin`; refuses local changes or a diverged `main` |
