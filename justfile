@@ -23,12 +23,14 @@ checksums:
 # formula cops, and `brew audit` reads formulae by name, not by path. When the tap `roselabs-io/tools` is this
 # checkout (CI, `Homebrew/actions/setup-homebrew`), it is used directly. Otherwise the checkout is symlinked into the
 # Taps directory as `roselabs-io/tools-gate` for the run and the link is removed on exit; an installed
-# `roselabs-io/tools` tap is not changed.
+# `roselabs-io/tools` tap is not changed. The formulae are made readable by all first: Git records them as 100644, but
+# a checkout made under umask 077 (the dispatcher's worktrees) has them 0600, which `FormulaAudit/Files` reports.
 [private]
 with-tap command:
     #!/usr/bin/env bash
     set -euo pipefail
     here="$(pwd -P)"
+    chmod a+r Formula/*.rb
     taps="$(brew --repository)/Library/Taps/roselabs-io"
     if [ -e "$taps/homebrew-tools" ] && [ "$(cd "$taps/homebrew-tools" && pwd -P)" = "$here" ]; then
         brew {{command}} roselabs-io/tools

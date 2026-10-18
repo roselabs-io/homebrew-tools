@@ -50,7 +50,10 @@ directory (the dispatcher's worktrees are under `~/.governor`) applies RuboCop's
 of Homebrew's formula cops. `check`, `test` and `fix` therefore run `brew` on a tap. When the tap
 `roselabs-io/tools` is the checkout (CI), they use it. Otherwise they link the checkout into
 Homebrew's Taps directory as `roselabs-io/tools-gate` for the run and remove the link on exit; an
-installed `roselabs-io/tools` tap is not changed. Two runs at once outside CI conflict: the second
+installed `roselabs-io/tools` tap is not changed. Before running `brew`, they run `chmod a+r` on
+`Formula/*.rb`: a checkout made under umask 077, as the dispatcher's worktrees are, has the formulae
+at mode 0600 while Git records 100644, and `brew style` reports `FormulaAudit/Files: Incorrect file
+permissions (600)`. Two runs at once outside CI conflict: the second
 exits 1 because the link exists.
 
 `brew style` is a developer command: its first run turns on Homebrew's developer mode, installs
