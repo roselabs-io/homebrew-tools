@@ -1,7 +1,6 @@
 class Sshca < Formula
   desc "SSH certificate authority and management CLI"
   homepage "https://github.com/roselabs-io/sshca"
-  version "0.1.0"
   license "MIT"
 
   on_macos do

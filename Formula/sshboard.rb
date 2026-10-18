@@ -1,8 +1,14 @@
 class Sshboard < Formula
   desc "Web interface over sshca and bastionhub"
   homepage "https://github.com/roselabs-io/sshboard"
-  version "0.1.0"
   license "MIT"
+
+  # sshboard reads bastionhub's endpoints.yaml + shells out for live status
+  # and the click-to-copy SSH command.
+  depends_on "roselabs-io/tools/bastionhub" => :recommended
+
+  # sshboard reads sshca's audit log + shells out to it for cert actions.
+  depends_on "roselabs-io/tools/sshca" => :recommended
 
   on_macos do
     if Hardware::CPU.arm?
@@ -23,13 +29,6 @@ class Sshboard < Formula
       sha256 "e2fb4524b286003259d9f50819c338769f557cc944db927d111775031c39168e"
     end
   end
-
-  # sshboard reads sshca's audit log + shells out to it for cert actions.
-  depends_on "roselabs-io/tools/sshca" => :recommended
-
-  # sshboard reads bastionhub's endpoints.yaml + shells out for live status
-  # and the click-to-copy SSH command.
-  depends_on "roselabs-io/tools/bastionhub" => :recommended
 
   def install
     bin.install "sshboard"

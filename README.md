@@ -39,7 +39,7 @@ from each tool's GitHub Releases page.
 When a new release is tagged in a tool's repo, the formula here gets a corresponding update:
 
 1. Fetch the new release's `checksums.txt` from `https://github.com/roselabs-io/<tool>/releases/download/v<X.Y.Z>/checksums.txt`
-2. Update `version`, the four `url` lines (one per platform), and the four `sha256` lines in `Formula/<tool>.rb`
-3. Commit + push
+2. Update the four `url` lines (one per platform) and the four `sha256` lines in `Formula/<tool>.rb`; Homebrew reads the version from the `url`
+3. Run `just gate` (`brew style`, `brew audit --strict`), then open a pull request
 
 Not currently automated.
