@@ -13,6 +13,7 @@ the tap's default branch. The rules for the formulae and their update are in Gov
 |---|---|
 | `Formula/sshca.rb`, `Formula/bastionhub.rb`, `Formula/sshboard.rb` | one formula per CLI: `desc`, `homepage`, `license`, one `url` and one `sha256` per platform (macOS and Linux, amd64 and arm64), `depends_on`, `install`, and a `test do` that runs `<tool> --version` |
 | `README.md` | install, platforms, the tools, the manual formula update |
+| `.secrets.baseline` | the detect-secrets findings `just secrets` accepts: the twelve `sha256` values of the formulae |
 | `.github/workflows/homebrewtools-ci.yml` | `validate` (PR metadata) and `gate` (`just gate`) |
 | `.github/workflows/homebrewtools-pm.yml` | the issue and board sync of Governor |
 | `pipeline.yaml` | the Governor dispatcher's config for this repository |
@@ -28,12 +29,14 @@ version change edits the four `url` lines and the four `sha256` lines.
 |---|---|
 | `just check` | `brew style Formula` |
 | `just test` | `brew audit --strict` of each formula of the checkout |
-| `just gate` | `check`, then `test`; the deterministic gate CI runs |
+| `just secrets` | `detect-secrets scan --no-verify` of the tracked files, compared with `.secrets.baseline` |
+| `just gate` | `check`, `secrets`, then `test`; the deterministic gate CI runs |
 | `just fix` | `brew style --fix Formula` |
 | `just ff` | switches to `main` and fast-forwards it from `origin`; refuses local changes or a diverged `main` |
 
 `up`, `down` and `logs` are not applicable (`checks.recipes.not_applicable` of `pipeline.yaml`):
-there is no local stack. `just` and Homebrew are required. The recipes set
+there is no local stack. `just`, Homebrew, `python3` and detect-secrets 1.5.0 on `PATH`
+(`pipx install detect-secrets==1.5.0`) are required. The recipes set
 `HOMEBREW_NO_AUTO_UPDATE`, `HOMEBREW_NO_INSTALL_CLEANUP` and `HOMEBREW_NO_ENV_HINTS`.
 
 `brew audit` reads formulae by name from a tap. When the tap `roselabs-io/tools` is the checkout
@@ -44,14 +47,28 @@ tap is not changed.
 `brew style` is a developer command: its first run turns on Homebrew's developer mode, installs
 Homebrew's style gems, and installs `shellcheck` and `actionlint` with `brew install`.
 
+`just secrets` exits 1 with `secrets: detect-secrets 1.5.0 is required` when another version or none
+is on `PATH`. It prints each finding whose file, hashed secret and type `.secrets.baseline` does not
+hold as `path:line: type` and exits 1; line numbers are not compared, so a moved line passes. It
+writes nothing. A new `sha256` value is a finding: a version change regenerates the baseline with
+
+```sh
+detect-secrets scan --no-verify --exclude-files '^\.secrets\.baseline$' > .secrets.baseline
+```
+
+and the diff of the baseline is reviewed. The detectors are detect-secrets' patterns and entropy
+rules, so a secret of an unknown format with low entropy is not found. Untracked files and Git
+history are not scanned.
+
 The gate does not download the archives: a wrong `url` or `sha256` is found when `brew install`
-fetches the archive. The gate does not scan for secrets (homebrew-tools#2).
+fetches the archive.
 
 ## CI
 
 All workflows run on GitHub-hosted `ubuntu-latest`. The repository is public; the organization's
 self-hosted runners do not serve it. The `gate` job sets up Homebrew with
-`Homebrew/actions/setup-homebrew`, which links the checkout as the tap `roselabs-io/tools`.
+`Homebrew/actions/setup-homebrew`, which links the checkout as the tap `roselabs-io/tools`. It
+installs detect-secrets 1.5.0 with `pipx` before `just gate`.
 `validate` and `homebrewtools-pm.yml` check out the private `roselabs-io/governor` with the
 organization secret `GOVERNOR_PM_TOKEN`, which a workflow run from a fork does not receive.
 

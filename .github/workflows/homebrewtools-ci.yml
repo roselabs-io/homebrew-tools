@@ -136,5 +136,8 @@ jobs:
       - name: Install just
         uses: extractions/setup-just@v4
 
+      - name: Install detect-secrets
+        run: pipx install detect-secrets==1.5.0
+
       - name: Gate
         run: just gate
