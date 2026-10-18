@@ -44,9 +44,10 @@ locking" (Homebrew 7.0.4, macOS).
 `brew audit` reads formulae by name from a tap, and `brew style Formula` under a path with a hidden
 directory (the dispatcher's worktrees are under `~/.governor`) applies RuboCop's generic cops instead
 of Homebrew's formula cops. `check`, `test` and `fix` therefore run `brew` on a tap. When the tap
-`roselabs-io/tools` is the checkout (CI), they use it. Otherwise they link the checkout into Homebrew's Taps directory as
-`roselabs-io/tools-gate` for the run and removes the link on exit; an installed `roselabs-io/tools`
-tap is not changed.
+`roselabs-io/tools` is the checkout (CI), they use it. Otherwise they link the checkout into
+Homebrew's Taps directory as `roselabs-io/tools-gate` for the run and remove the link on exit; an
+installed `roselabs-io/tools` tap is not changed. Two runs at once outside CI conflict: the second
+exits 1 because the link exists.
 
 `brew style` is a developer command: its first run turns on Homebrew's developer mode, installs
 Homebrew's style gems, and installs `shellcheck` and `actionlint` with `brew install`.
