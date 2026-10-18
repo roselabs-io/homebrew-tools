@@ -8,6 +8,14 @@ export HOMEBREW_NO_AUTO_UPDATE := "1"
 export HOMEBREW_NO_INSTALL_CLEANUP := "1"
 export HOMEBREW_NO_ENV_HINTS := "1"
 
+# Offline check of each formula's url and sha256 lines: one version, four platforms, 64-hex checksums.
+formulae:
+    python3 tools/formula_check.py Formula/*.rb
+
+# Compares each formula's sha256 lines with its release's checksums.txt. Needs the network; not part of the gate.
+checksums:
+    python3 tools/formula_check.py --checksums Formula/*.rb
+
 # Style check of the formulae.
 check:
     brew style Formula
@@ -33,7 +41,7 @@ test:
     brew audit --strict --tap roselabs-io/tools-gate
 
 # The deterministic gate CI runs.
-gate: check test
+gate: formulae check test
 
 # Apply the style fixes.
 fix:

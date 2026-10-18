@@ -40,6 +40,6 @@ When a new release is tagged in a tool's repo, the formula here gets a correspon
 
 1. Fetch the new release's `checksums.txt` from `https://github.com/roselabs-io/<tool>/releases/download/v<X.Y.Z>/checksums.txt`
 2. Update the four `url` lines (one per platform) and the four `sha256` lines in `Formula/<tool>.rb`; Homebrew reads the version from the `url`
-3. Run `just gate` (`brew style`, `brew audit --strict`), then open a pull request
+3. Run `just checksums` (compares the `sha256` lines with each release's `checksums.txt`) and `just gate` (the `url` and `sha256` line check, `brew style`, `brew audit --strict`), then open a pull request
 
 Not currently automated.
