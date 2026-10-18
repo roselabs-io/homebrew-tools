@@ -67,7 +67,7 @@ fetches the archive.
 
 All workflows run on GitHub-hosted `ubuntu-latest`. The repository is public; the organization's
 self-hosted runners do not serve it. The `gate` job sets up Homebrew with
-`Homebrew/actions/setup-homebrew`, which links the checkout as the tap `roselabs-io/tools`. It
+`Homebrew/actions/setup-homebrew`, which links the checkout as the tap `roselabs-io/tools`. The job
 installs detect-secrets 1.5.0 with `pipx` before `just gate`.
 `validate` and `homebrewtools-pm.yml` check out the private `roselabs-io/governor` with the
 organization secret `GOVERNOR_PM_TOKEN`, which a workflow run from a fork does not receive.
