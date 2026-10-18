@@ -1,8 +1,10 @@
 class Bastionhub < Formula
   desc "SSH bastion and reverse-tunnel manager"
   homepage "https://github.com/roselabs-io/bastionhub"
-  version "0.2.0"
   license "MIT"
+
+  # bastionhub endpoint enroll shells out to `sshca cert sign`.
+  depends_on "roselabs-io/tools/sshca"
 
   on_macos do
     if Hardware::CPU.arm?
@@ -23,9 +25,6 @@ class Bastionhub < Formula
       sha256 "5700ea080a1a4c695e1d10d45361176c785843bfa5131fc724f4a7d3d5a81dd5"
     end
   end
-
-  # bastionhub endpoint enroll shells out to `sshca cert sign`.
-  depends_on "roselabs-io/tools/sshca"
 
   def install
     bin.install "bastionhub"
