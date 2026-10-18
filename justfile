@@ -7,30 +7,46 @@
 export HOMEBREW_NO_AUTO_UPDATE := "1"
 export HOMEBREW_NO_INSTALL_CLEANUP := "1"
 export HOMEBREW_NO_ENV_HINTS := "1"
+# With bootsnap, `brew style <tap>` on a symlinked tap exits with "deadlock; recursive locking" (Homebrew 7.0.4, macOS).
+export HOMEBREW_NO_BOOTSNAP := "1"
 
-# Style check of the formulae.
-check:
-    brew style Formula
+# Offline check of each formula's url and sha256 lines: one version, four platforms, 64-hex checksums.
+formulae:
+    python3 tools/formula_check.py Formula/*.rb
 
-# `brew audit --strict` of each formula of this checkout. `brew audit` reads formulae by name from a tap, not by
-# path. When the tap `roselabs-io/tools` is this checkout (CI, `Homebrew/actions/setup-homebrew`), it is audited
-# directly. Otherwise the checkout is symlinked into the Taps directory as `roselabs-io/tools-gate` for the run and
-# the link is removed on exit; an installed `roselabs-io/tools` tap is not changed.
-test:
+# Compares each formula's sha256 lines with its release's checksums.txt. Needs the network; not part of the gate.
+checksums:
+    python3 tools/formula_check.py --checksums Formula/*.rb
+
+# Runs `brew <command> <tap>` on the tap of this checkout. `brew style` and `brew audit` read the formulae through a
+# tap: `brew style Formula` under a path with a hidden directory applies RuboCop's generic cops instead of Homebrew's
+# formula cops, and `brew audit` reads formulae by name, not by path. When the tap `roselabs-io/tools` is this
+# checkout (CI, `Homebrew/actions/setup-homebrew`), it is used directly. Otherwise the checkout is symlinked into the
+# Taps directory as `roselabs-io/tools-gate` for the run and the link is removed on exit; an installed
+# `roselabs-io/tools` tap is not changed.
+[private]
+with-tap command:
     #!/usr/bin/env bash
     set -euo pipefail
     here="$(pwd -P)"
     taps="$(brew --repository)/Library/Taps/roselabs-io"
     if [ -e "$taps/homebrew-tools" ] && [ "$(cd "$taps/homebrew-tools" && pwd -P)" = "$here" ]; then
-        brew audit --strict --tap roselabs-io/tools
+        brew {{command}} roselabs-io/tools
         exit 0
     fi
     link="$taps/homebrew-tools-gate"
-    if [ -e "$link" ] || [ -L "$link" ]; then echo "test: $link exists; remove it" >&2; exit 1; fi
+    if [ -e "$link" ] || [ -L "$link" ]; then echo "with-tap: $link exists; remove it" >&2; exit 1; fi
     mkdir -p "$taps"
     ln -s "$here" "$link"
     trap 'rm -f "$link"' EXIT
-    brew audit --strict --tap roselabs-io/tools-gate
+    brew {{command}} roselabs-io/tools-gate
+
+# Style check of the formulae.
+check: (with-tap "style")
+
+# Self-check of tools/formula_check.py, then `brew audit --strict` of each formula of this checkout.
+test: && (with-tap "audit --strict --tap")
+    python3 -B -m unittest discover -s tools -p 'test_*.py'
 
 # Secret scan of the tracked files with detect-secrets 1.5.0, without the network (`--no-verify`). Each finding
 # whose file, hashed secret and type `.secrets.baseline` does not hold is printed as `path:line: type` and fails the
@@ -56,11 +72,10 @@ secrets:
     '
 
 # The deterministic gate CI runs.
-gate: check secrets test
+gate: formulae check secrets test
 
 # Apply the style fixes.
-fix:
-    brew style --fix Formula
+fix: (with-tap "style --fix")
 
 # Switch to main and fast-forward it from origin; refuses local changes or a diverged main.
 ff:

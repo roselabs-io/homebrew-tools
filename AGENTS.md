@@ -18,6 +18,8 @@ the tap's default branch. The rules for the formulae and their update are in Gov
 | `.github/workflows/homebrewtools-pm.yml` | the issue and board sync of Governor |
 | `pipeline.yaml` | the Governor dispatcher's config for this repository |
 | `tools/local_preflight.py` | the local check the dispatcher runs: `just check`, then `just gate` |
+| `tools/formula_check.py` | the check of each formula's `url` and `sha256` lines that `just formulae` and `just checksums` run |
+| `tools/test_formula_check.py` | the self-check of `tools/formula_check.py` that `just test` runs: a valid formula has no finding, each malformed one has one |
 
 A formula has no `version` line: `brew audit --strict` reports it as redundant, and Homebrew reads
 the version from the `url` (`.../download/v<version>/<tool>-v<version>-<os>-<arch>.tar.gz`). A
@@ -27,22 +29,29 @@ version change edits the four `url` lines and the four `sha256` lines.
 
 | Recipe | Runs |
 |---|---|
-| `just check` | `brew style Formula` |
-| `just test` | `brew audit --strict` of each formula of the checkout |
+| `just formulae` | `tools/formula_check.py`, offline: each formula has four `url` lines of one version covering darwin and linux, amd64 and arm64, each followed by a `sha256` line of 64 lowercase hex characters |
+| `just checksums` | `formulae`, then compares each `sha256` with the release's `checksums.txt`; downloads it, so it is not part of the gate |
+| `just check` | `brew style` of the checkout's tap |
 | `just secrets` | `detect-secrets scan --no-verify` of the tracked files, compared with `.secrets.baseline` |
-| `just gate` | `check`, `secrets`, then `test`; the deterministic gate CI runs |
-| `just fix` | `brew style --fix Formula` |
+| `just test` | `tools/test_formula_check.py`, the self-check of `tools/formula_check.py`, then `brew audit --strict` of each formula of the checkout |
+| `just gate` | `formulae`, `check`, `secrets`, then `test`; the deterministic gate CI runs |
+| `just fix` | `brew style --fix` of the checkout's tap |
 | `just ff` | switches to `main` and fast-forwards it from `origin`; refuses local changes or a diverged `main` |
 
 `up`, `down` and `logs` are not applicable (`checks.recipes.not_applicable` of `pipeline.yaml`):
 there is no local stack. `just`, Homebrew, `python3` and detect-secrets 1.5.0 on `PATH`
 (`pipx install detect-secrets==1.5.0`) are required. The recipes set
-`HOMEBREW_NO_AUTO_UPDATE`, `HOMEBREW_NO_INSTALL_CLEANUP` and `HOMEBREW_NO_ENV_HINTS`.
+`HOMEBREW_NO_AUTO_UPDATE`, `HOMEBREW_NO_INSTALL_CLEANUP`, `HOMEBREW_NO_ENV_HINTS` and
+`HOMEBREW_NO_BOOTSNAP`; with bootsnap, `brew style` of a symlinked tap exits with "deadlock; recursive
+locking" (Homebrew 7.0.4, macOS).
 
-`brew audit` reads formulae by name from a tap. When the tap `roselabs-io/tools` is the checkout
-(CI), `just test` audits it. Otherwise it links the checkout into Homebrew's Taps directory as
-`roselabs-io/tools-gate` for the run and removes the link on exit; an installed `roselabs-io/tools`
-tap is not changed.
+`brew audit` reads formulae by name from a tap, and `brew style Formula` under a path with a hidden
+directory (the dispatcher's worktrees are under `~/.governor`) applies RuboCop's generic cops instead
+of Homebrew's formula cops. `check`, `test` and `fix` therefore run `brew` on a tap. When the tap
+`roselabs-io/tools` is the checkout (CI), they use it. Otherwise they link the checkout into
+Homebrew's Taps directory as `roselabs-io/tools-gate` for the run and remove the link on exit; an
+installed `roselabs-io/tools` tap is not changed. Two runs at once outside CI conflict: the second
+exits 1 because the link exists.
 
 `brew style` is a developer command: its first run turns on Homebrew's developer mode, installs
 Homebrew's style gems, and installs `shellcheck` and `actionlint` with `brew install`.
@@ -60,8 +69,8 @@ and the diff of the baseline is reviewed. The detectors are detect-secrets' patt
 rules, so a secret of an unknown format with low entropy is not found. Untracked files and Git
 history are not scanned.
 
-The gate does not download the archives: a wrong `url` or `sha256` is found when `brew install`
-fetches the archive.
+The gate does not download the archives or `checksums.txt`: a `sha256` that does not match the
+release is found by `just checksums` or when `brew install` fetches the archive.
 
 ## CI
 
