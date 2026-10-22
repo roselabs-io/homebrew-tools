@@ -17,7 +17,7 @@ the tap's default branch. The rules for the formulae and their update are in Gov
 | `.github/workflows/homebrewtools-pm.yml` | the issue and board sync of Governor |
 | `.github/workflows/homebrewtools-formula.yml` | on a `repository_dispatch` event `formula-update` (`tool`, `tag`), runs `tools/formula_update.py` and opens a pull request with the formula |
 | `pipeline.yaml` | the Governor dispatcher's config for this repository |
-| `tools/local_preflight.py` | the local check the dispatcher runs: `just check`, then `just gate` |
+| Governor's package preflight (`tools/local_preflight.py` of the Governor package, run by the dispatcher; this repository keeps no copy) | the local check the dispatcher runs: `just check`, then `just gate` |
 | `tools/formula_check.py` | the check of each formula's `url` and `sha256` lines that `just formulae` and `just checksums` run |
 | `tools/test_formula_check.py` | the self-check of `tools/formula_check.py` that `just test` runs: a valid formula has no finding, each malformed one has one |
 | `tools/formula_update.py` | rewrites the four `url` and four `sha256` lines of `Formula/<tool>.rb` for a tag `v<X.Y.Z>` from the release's `checksums.txt`; fails when it lacks one of the four archives |
