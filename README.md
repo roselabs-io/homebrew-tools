@@ -63,7 +63,12 @@ not merged automatically. It is opened with the workflow's `GITHUB_TOKEN`, and G
 workflow for an event of that token: `homebrewtools-ci.yml` runs on the pull request once a person
 closes and reopens it.
 
+The workflow does not regenerate `.secrets.baseline`: the new `sha256` values are findings of
+`just secrets`, so the gate of its pull request fails until the baseline is regenerated on the
+branch (By hand, step 2).
+
 ### By hand
 
 1. Run `python3 tools/formula_update.py <tool> v<X.Y.Z>`, or fetch the release's `checksums.txt` and update the four `url` lines and the four `sha256` lines of `Formula/<tool>.rb`
-2. Run `just checksums` (compares the `sha256` lines with each release's `checksums.txt`) and `just gate` (the `url` and `sha256` line check, `brew style`, `brew audit --strict`), then open a pull request
+2. Regenerate the secret-scan baseline, which holds the `sha256` values and the keyword detector's findings on the `secrets` recipe of `justfile`: `detect-secrets scan --no-verify --exclude-files '^\.secrets\.baseline$' > .secrets.baseline` (detect-secrets 1.5.0)
+3. Run `just checksums` (compares the `sha256` lines with each release's `checksums.txt`) and `just gate` (the `url` and `sha256` line check, `brew style`, the secret scan, `brew audit --strict`), then open a pull request

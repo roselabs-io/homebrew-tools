@@ -11,7 +11,7 @@ run-name: "${{ inputs.pr_number && format('homebrew-tools CI PR #{0} {1}', input
 # Both jobs run on GitHub-hosted `ubuntu-latest`: the repository is public, and the organization's
 # self-hosted runner group does not serve public repositories. `gate` installs `just` and sets up
 # Homebrew with `Homebrew/actions/setup-homebrew`, which points the tap `roselabs-io/tools` at the
-# checkout, before `just gate` (`tools/formula_check.py`, `brew style`, then `brew audit --strict --tap roselabs-io/tools`).
+# checkout, before `just gate` (`tools/formula_check.py`, `brew style`, the secret scan, then `brew audit --strict --tap roselabs-io/tools`).
 # A PR from a fork receives no `GOVERNOR_PM_TOKEN`, so its `Check out the Governor package` step fails.
 
 on:
@@ -135,6 +135,9 @@ jobs:
 
       - name: Install just
         uses: extractions/setup-just@v4
+
+      - name: Install detect-secrets
+        run: pipx install detect-secrets==1.5.0
 
       - name: Gate
         run: just gate

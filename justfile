@@ -50,8 +50,31 @@ check: (with-tap "style")
 test: && (with-tap "audit --strict --tap")
     python3 -B -m unittest discover -s tools -p 'test_*.py'
 
+# Secret scan of the tracked files with detect-secrets 1.5.0, without the network (`--no-verify`). Each finding
+# whose file, hashed secret and type `.secrets.baseline` does not hold is printed as `path:line: type` and fails the
+# recipe; line numbers are not compared. The recipe writes nothing. Untracked files and Git history are not scanned.
+secrets:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    if [ "$(detect-secrets --version 2>/dev/null)" != "1.5.0" ]; then
+        echo "secrets: detect-secrets 1.5.0 is required: pipx install detect-secrets==1.5.0" >&2
+        exit 1
+    fi
+    scan="$(detect-secrets scan --no-verify --exclude-files '^\.secrets\.baseline$')"
+    SCAN="$scan" python3 -c '
+    import json, os, sys
+    def secrets(report):
+        return [(path, s) for path, found in report["results"].items() for s in found]
+    with open(".secrets.baseline") as file:
+        accepted = {(path, s["hashed_secret"], s["type"]) for path, s in secrets(json.load(file))}
+    new = [(path, s) for path, s in secrets(json.loads(os.environ["SCAN"])) if (path, s["hashed_secret"], s["type"]) not in accepted]
+    for path, s in new:
+        print("{}:{}: {}".format(path, s["line_number"], s["type"]))
+    sys.exit("secrets: {} findings not in .secrets.baseline".format(len(new)) if new else 0)
+    '
+
 # The deterministic gate CI runs.
-gate: formulae check test
+gate: formulae check secrets test
 
 # Apply the style fixes.
 fix: (with-tap "style --fix")

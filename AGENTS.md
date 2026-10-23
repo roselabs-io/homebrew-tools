@@ -13,6 +13,7 @@ the tap's default branch. The rules for the formulae and their update are in Gov
 |---|---|
 | `Formula/sshca.rb`, `Formula/bastionhub.rb`, `Formula/sshboard.rb` | one formula per CLI: `desc`, `homepage`, `license`, one `url` and one `sha256` per platform (macOS and Linux, amd64 and arm64), `depends_on`, `install`, and a `test do` that runs `<tool> --version` |
 | `README.md` | install, platforms, the tools, the manual formula update |
+| `.secrets.baseline` | the detect-secrets findings `just secrets` accepts: the twelve `sha256` values of the formulae, and sixteen `Secret Keyword` findings on the lines of the `secrets` recipe body in `justfile` |
 | `.github/workflows/homebrewtools-ci.yml` | `validate` (PR metadata) and `gate` (`just gate`) |
 | `.github/workflows/homebrewtools-pm.yml` | the issue and board sync of Governor |
 | `.github/workflows/homebrewtools-formula.yml` | on a `repository_dispatch` event `formula-update` (`tool`, `tag`), runs `tools/formula_update.py` and opens a pull request with the formula |
@@ -34,13 +35,15 @@ version change edits the four `url` lines and the four `sha256` lines.
 | `just formulae` | `tools/formula_check.py`, offline: each formula has four `url` lines of one version covering darwin and linux, amd64 and arm64, each followed by a `sha256` line of 64 lowercase hex characters |
 | `just checksums` | `formulae`, then compares each `sha256` with the release's `checksums.txt`; downloads it, so it is not part of the gate |
 | `just check` | `brew style` of the checkout's tap |
+| `just secrets` | `detect-secrets scan --no-verify` of the tracked files, compared with `.secrets.baseline` |
 | `just test` | `tools/test_formula_check.py` and `tools/test_formula_update.py`, the self-checks of the two scripts, then `brew audit --strict` of each formula of the checkout |
-| `just gate` | `formulae`, `check`, then `test`; the deterministic gate CI runs |
+| `just gate` | `formulae`, `check`, `secrets`, then `test`; the deterministic gate CI runs |
 | `just fix` | `brew style --fix` of the checkout's tap |
 | `just ff` | switches to `main` and fast-forwards it from `origin`; refuses local changes or a diverged `main` |
 
 `up`, `down` and `logs` are not applicable (`checks.recipes.not_applicable` of `pipeline.yaml`):
-there is no local stack. `just`, Homebrew and `python3` are required. The recipes set
+there is no local stack. `just`, Homebrew, `python3` and detect-secrets 1.5.0 on `PATH`
+(`pipx install detect-secrets==1.5.0`) are required. The recipes set
 `HOMEBREW_NO_AUTO_UPDATE`, `HOMEBREW_NO_INSTALL_CLEANUP`, `HOMEBREW_NO_ENV_HINTS` and
 `HOMEBREW_NO_BOOTSNAP`; with bootsnap, `brew style` of a symlinked tap exits with "deadlock; recursive
 locking" (Homebrew 7.0.4, macOS).
@@ -59,14 +62,34 @@ exits 1 because the link exists.
 `brew style` is a developer command: its first run turns on Homebrew's developer mode, installs
 Homebrew's style gems, and installs `shellcheck` and `actionlint` with `brew install`.
 
+`just secrets` exits 1 with `secrets: detect-secrets 1.5.0 is required` when another version or none
+is on `PATH`. It prints each finding whose file, hashed secret and type `.secrets.baseline` does not
+hold as `path:line: type` and exits 1; line numbers are not compared, so a moved line passes. It
+writes nothing. A new `sha256` value is a finding: a version change regenerates the baseline with
+
+```sh
+detect-secrets scan --no-verify --exclude-files '^\.secrets\.baseline$' > .secrets.baseline
+```
+
+and the diff of the baseline is reviewed. `homebrewtools-formula.yml` does not regenerate the baseline, so
+`just secrets` fails on its pull request until the baseline is regenerated on that branch. The detectors are detect-secrets' patterns and entropy
+rules, so a secret of an unknown format with low entropy is not found. Untracked files and Git
+history are not scanned.
+
+detect-secrets' keyword detector reads the `secrets:` recipe header of `justfile` as a keyword and
+each line of the recipe body as its value, so each body line is a finding the baseline holds. A new
+or edited line of that recipe is a new finding: a change to the recipe regenerates the baseline as a
+version change does.
+
 The gate does not download the archives or `checksums.txt`: a `sha256` that does not match the
-release is found by `just checksums` or when `brew install` fetches the archive. The gate does not scan for secrets (homebrew-tools#2).
+release is found by `just checksums` or when `brew install` fetches the archive.
 
 ## CI
 
 All workflows run on GitHub-hosted `ubuntu-latest`. The repository is public; the organization's
 self-hosted runners do not serve it. The `gate` job sets up Homebrew with
-`Homebrew/actions/setup-homebrew`, which links the checkout as the tap `roselabs-io/tools`.
+`Homebrew/actions/setup-homebrew`, which links the checkout as the tap `roselabs-io/tools`. The job
+installs detect-secrets 1.5.0 with `pipx` before `just gate`.
 `validate` and `homebrewtools-pm.yml` check out the private `roselabs-io/governor` with the
 organization secret `GOVERNOR_PM_TOKEN`, which a workflow run from a fork does not receive.
 
