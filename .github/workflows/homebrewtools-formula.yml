@@ -8,10 +8,11 @@ run-name: "formula update ${{ github.event.client_payload.tool }} ${{ github.eve
 # `formula/<tool>-<tag>`, opens a pull request into `main` and enables squash auto-merge on it. The job fails when the
 # script fails, and opens no pull request when the formula is already at the tag.
 #
-# The branch is pushed and the pull request opened and set to auto-merge with the organization secret
-# `HOMEBREW_TAP_TOKEN`: GitHub starts no workflow for an event that `github.token` causes, so `homebrewtools-ci.yml`
-# would not run on the pull request. GitHub merges the pull request when the required checks of `main` (`validate`,
-# `Deterministic gate`) pass. Only the branch this job creates is merged this way.
+# The branch is pushed with `github.token`, which checkout keeps in the git config. The pull request is opened and set
+# to auto-merge with the organization secret `HOMEBREW_TAP_TOKEN`, only in the step that does so: GitHub starts no
+# workflow for an event that `github.token` causes, so `homebrewtools-ci.yml` would not run on a pull request opened
+# with it. The push of a `formula/**` branch starts no workflow. GitHub merges the pull request when the required
+# checks of `main` (`validate`, `Deterministic gate`) pass. Only the branch this job creates is merged this way.
 # `repository_dispatch` runs the workflow file of the default branch.
 
 on:
@@ -35,8 +36,6 @@ jobs:
       TAG: ${{ github.event.client_payload.tag }}
     steps:
       - uses: actions/checkout@v7
-        with:
-          token: ${{ secrets.HOMEBREW_TAP_TOKEN }}
 
       - name: Rewrite the formula
         run: python3 -B tools/formula_update.py "$TOOL" "$TAG"
