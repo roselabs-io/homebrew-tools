@@ -57,19 +57,24 @@ def check(path: Path) -> tuple[list[str], list[tuple[int, re.Match, str]]]:
     return findings, entries
 
 
+def published(release: str) -> dict[str, str]:
+    """Downloads `<release>/checksums.txt` and returns its sha256 per archive name."""
+    with urllib.request.urlopen(f"{release}/checksums.txt", timeout=30) as response:
+        lines = response.read().decode().split("\n")
+    return {name: sha256 for sha256, name in (line.split() for line in lines if line.strip())}
+
+
 def compare(path: Path, entries: list[tuple[int, re.Match, str]]) -> list[str]:
     """Compares each sha256 with the release's checksums.txt."""
     findings: list[str] = []
     for release in sorted({url["url"].rsplit("/", 1)[0] for _, url, _ in entries}):
-        with urllib.request.urlopen(f"{release}/checksums.txt", timeout=30) as response:
-            lines = response.read().decode().split("\n")
-        published = {name: sha256 for sha256, name in (line.split() for line in lines if line.strip())}
+        checksums = published(release)
         for number, url, sha256 in entries:
             if not url["url"].startswith(release + "/"):
                 continue
-            if url["archive"] not in published:
+            if url["archive"] not in checksums:
                 findings.append(f"{path}:{number}: {url['archive']} is not in {release}/checksums.txt")
-            elif published[url["archive"]] != sha256:
+            elif checksums[url["archive"]] != sha256:
                 findings.append(f"{path}:{number + 1}: sha256 differs from {release}/checksums.txt")
     return findings
 

@@ -16,10 +16,13 @@ the tap's default branch. The rules for the formulae and their update are in Gov
 | `.secrets.baseline` | the detect-secrets findings `just secrets` accepts: the twelve `sha256` values of the formulae, and sixteen `Secret Keyword` findings on the lines of the `secrets` recipe body in `justfile` |
 | `.github/workflows/homebrewtools-ci.yml` | `validate` (PR metadata) and `gate` (`just gate`) |
 | `.github/workflows/homebrewtools-pm.yml` | the issue and board sync of Governor |
+| `.github/workflows/homebrewtools-formula.yml` | on a `repository_dispatch` event `formula-update` (`tool`, `tag`), runs `tools/formula_update.py` and opens a pull request with the formula |
 | `pipeline.yaml` | the Governor dispatcher's config for this repository |
-| `tools/local_preflight.py` | the local check the dispatcher runs: `just check`, then `just gate` |
+| Governor's package preflight (`tools/local_preflight.py` of the Governor package, run by the dispatcher; this repository keeps no copy) | the local check the dispatcher runs: `just check`, then `just gate` |
 | `tools/formula_check.py` | the check of each formula's `url` and `sha256` lines that `just formulae` and `just checksums` run |
 | `tools/test_formula_check.py` | the self-check of `tools/formula_check.py` that `just test` runs: a valid formula has no finding, each malformed one has one |
+| `tools/formula_update.py` | rewrites the four `url` and four `sha256` lines of `Formula/<tool>.rb` for a tag `v<X.Y.Z>` from the release's `checksums.txt`; fails when it lacks one of the four archives |
+| `tools/test_formula_update.py` | the self-check of `tools/formula_update.py` that `just test` runs |
 
 A formula has no `version` line: `brew audit --strict` reports it as redundant, and Homebrew reads
 the version from the `url` (`.../download/v<version>/<tool>-v<version>-<os>-<arch>.tar.gz`). A
@@ -33,7 +36,7 @@ version change edits the four `url` lines and the four `sha256` lines.
 | `just checksums` | `formulae`, then compares each `sha256` with the release's `checksums.txt`; downloads it, so it is not part of the gate |
 | `just check` | `brew style` of the checkout's tap |
 | `just secrets` | `detect-secrets scan --no-verify` of the tracked files, compared with `.secrets.baseline` |
-| `just test` | `tools/test_formula_check.py`, the self-check of `tools/formula_check.py`, then `brew audit --strict` of each formula of the checkout |
+| `just test` | `tools/test_formula_check.py` and `tools/test_formula_update.py`, the self-checks of the two scripts, then `brew audit --strict` of each formula of the checkout |
 | `just gate` | `formulae`, `check`, `secrets`, then `test`; the deterministic gate CI runs |
 | `just fix` | `brew style --fix` of the checkout's tap |
 | `just ff` | switches to `main` and fast-forwards it from `origin`; refuses local changes or a diverged `main` |
@@ -50,7 +53,10 @@ directory (the dispatcher's worktrees are under `~/.governor`) applies RuboCop's
 of Homebrew's formula cops. `check`, `test` and `fix` therefore run `brew` on a tap. When the tap
 `roselabs-io/tools` is the checkout (CI), they use it. Otherwise they link the checkout into
 Homebrew's Taps directory as `roselabs-io/tools-gate` for the run and remove the link on exit; an
-installed `roselabs-io/tools` tap is not changed. Two runs at once outside CI conflict: the second
+installed `roselabs-io/tools` tap is not changed. Before running `brew`, they run `chmod a+r` on
+`Formula/*.rb`: a checkout made under umask 077, as the dispatcher's worktrees are, has the formulae
+at mode 0600 while Git records 100644, and `brew style` reports `FormulaAudit/Files: Incorrect file
+permissions (600)`. Two runs at once outside CI conflict: the second
 exits 1 because the link exists.
 
 `brew style` is a developer command: its first run turns on Homebrew's developer mode, installs
@@ -65,7 +71,8 @@ writes nothing. A new `sha256` value is a finding: a version change regenerates 
 detect-secrets scan --no-verify --exclude-files '^\.secrets\.baseline$' > .secrets.baseline
 ```
 
-and the diff of the baseline is reviewed. The detectors are detect-secrets' patterns and entropy
+and the diff of the baseline is reviewed. `homebrewtools-formula.yml` does not regenerate the baseline, so
+`just secrets` fails on its pull request until the baseline is regenerated on that branch. The detectors are detect-secrets' patterns and entropy
 rules, so a secret of an unknown format with low entropy is not found. Untracked files and Git
 history are not scanned.
 

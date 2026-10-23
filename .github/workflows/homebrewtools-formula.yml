@@ -1,0 +1,55 @@
+name: homebrew-tools formula update
+run-name: "formula update ${{ github.event.client_payload.tool }} ${{ github.event.client_payload.tag }}"
+
+# A `repository_dispatch` event of type `formula-update` with `client_payload` `{"tool": "<tool>", "tag": "v<X.Y.Z>"}`
+# runs `tools/formula_update.py <tool> <tag>`, which rewrites the four `url` and four `sha256` lines of
+# `Formula/<tool>.rb` from the release's `checksums.txt`. The job commits the formula on the branch
+# `formula/<tool>-<tag>` and opens a pull request into `main`; it merges nothing. The job fails when the script
+# fails, and opens no pull request when the formula is already at the tag.
+#
+# The branch is pushed and the pull request opened with `github.token`. GitHub starts no workflow for an event that
+# token causes, so `homebrewtools-ci.yml` does not run on the pull request until a person closes and reopens it.
+# `repository_dispatch` runs the workflow file of the default branch.
+
+on:
+  repository_dispatch:
+    types: [formula-update]
+
+concurrency:
+  group: homebrewtools-formula-${{ github.event.client_payload.tool }}
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  update:
+    runs-on: ${{ fromJSON('["ubuntu-latest"]') }}
+    timeout-minutes: 10
+    env:
+      TOOL: ${{ github.event.client_payload.tool }}
+      TAG: ${{ github.event.client_payload.tag }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Rewrite the formula
+        run: python3 -B tools/formula_update.py "$TOOL" "$TAG"
+
+      - name: Open a pull request
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if git diff --quiet -- "Formula/$TOOL.rb"; then
+            echo "Formula/$TOOL.rb is already at $TAG"
+            exit 0
+          fi
+          branch="formula/$TOOL-$TAG"
+          git switch -c "$branch"
+          git add "Formula/$TOOL.rb"
+          git -c user.name=github-actions[bot] -c user.email=41898282+github-actions[bot]@users.noreply.github.com \
+            commit -m "chore($TOOL): update the formula to ${TAG#v}"
+          git push origin "$branch"
+          gh pr create --base main --head "$branch" \
+            --title "chore($TOOL): update the formula to ${TAG#v}" \
+            --body "Formula/$TOOL.rb: the four url and sha256 lines from https://github.com/roselabs-io/$TOOL/releases/download/$TAG/checksums.txt."
