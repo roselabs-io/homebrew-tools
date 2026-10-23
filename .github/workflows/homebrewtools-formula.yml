@@ -3,7 +3,8 @@ run-name: "formula update ${{ github.event.client_payload.tool }} ${{ github.eve
 
 # A `repository_dispatch` event of type `formula-update` with `client_payload` `{"tool": "<tool>", "tag": "v<X.Y.Z>"}`
 # runs `tools/formula_update.py <tool> <tag>`, which rewrites the four `url` and four `sha256` lines of
-# `Formula/<tool>.rb` from the release's `checksums.txt`. The job commits the formula on the branch
+# `Formula/<tool>.rb` from the release's `checksums.txt`, and regenerates `.secrets.baseline` with detect-secrets 1.5.0
+# so that `just secrets` accepts the new `sha256` values. The job commits both files on the branch
 # `formula/<tool>-<tag>` and opens a pull request into `main`; it merges nothing. The job fails when the script
 # fails, and opens no pull request when the formula is already at the tag.
 #
@@ -36,6 +37,15 @@ jobs:
       - name: Rewrite the formula
         run: python3 -B tools/formula_update.py "$TOOL" "$TAG"
 
+      - name: Regenerate the secret-scan baseline
+        run: |
+          if git diff --quiet -- "Formula/$TOOL.rb"; then
+            exit 0
+          fi
+          pipx install detect-secrets==1.5.0
+          detect-secrets scan --no-verify --exclude-files '^\.secrets\.baseline$' > .secrets.baseline.new
+          mv .secrets.baseline.new .secrets.baseline
+
       - name: Open a pull request
         env:
           GH_TOKEN: ${{ github.token }}
@@ -46,10 +56,10 @@ jobs:
           fi
           branch="formula/$TOOL-$TAG"
           git switch -c "$branch"
-          git add "Formula/$TOOL.rb"
+          git add "Formula/$TOOL.rb" .secrets.baseline
           git -c user.name=github-actions[bot] -c user.email=41898282+github-actions[bot]@users.noreply.github.com \
             commit -m "chore($TOOL): update the formula to ${TAG#v}"
           git push origin "$branch"
           gh pr create --base main --head "$branch" \
             --title "chore($TOOL): update the formula to ${TAG#v}" \
-            --body "Formula/$TOOL.rb: the four url and sha256 lines from https://github.com/roselabs-io/$TOOL/releases/download/$TAG/checksums.txt."
+            --body "Formula/$TOOL.rb: the four url and sha256 lines from https://github.com/roselabs-io/$TOOL/releases/download/$TAG/checksums.txt. .secrets.baseline: regenerated with detect-secrets 1.5.0; review its diff."

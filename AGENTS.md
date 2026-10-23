@@ -16,7 +16,7 @@ the tap's default branch. The rules for the formulae and their update are in Gov
 | `.secrets.baseline` | the detect-secrets findings `just secrets` accepts: the twelve `sha256` values of the formulae, and sixteen `Secret Keyword` findings on the lines of the `secrets` recipe body in `justfile` |
 | `.github/workflows/homebrewtools-ci.yml` | `validate` (PR metadata) and `gate` (`just gate`) |
 | `.github/workflows/homebrewtools-pm.yml` | the issue and board sync of Governor |
-| `.github/workflows/homebrewtools-formula.yml` | on a `repository_dispatch` event `formula-update` (`tool`, `tag`), runs `tools/formula_update.py` and opens a pull request with the formula |
+| `.github/workflows/homebrewtools-formula.yml` | on a `repository_dispatch` event `formula-update` (`tool`, `tag`), runs `tools/formula_update.py`, regenerates `.secrets.baseline` and opens a pull request with the formula and the baseline |
 | `pipeline.yaml` | the Governor dispatcher's config for this repository |
 | Governor's package preflight (`tools/local_preflight.py` of the Governor package, run by the dispatcher; this repository keeps no copy) | the local check the dispatcher runs: `just check`, then `just gate` |
 | `tools/formula_check.py` | the check of each formula's `url` and `sha256` lines that `just formulae` and `just checksums` run |
@@ -71,8 +71,7 @@ writes nothing. A new `sha256` value is a finding: a version change regenerates 
 detect-secrets scan --no-verify --exclude-files '^\.secrets\.baseline$' > .secrets.baseline
 ```
 
-and the diff of the baseline is reviewed. `homebrewtools-formula.yml` does not regenerate the baseline, so
-`just secrets` fails on its pull request until the baseline is regenerated on that branch. The detectors are detect-secrets' patterns and entropy
+and the diff of the baseline is reviewed. `homebrewtools-formula.yml` regenerates the baseline with this command on its branch. The detectors are detect-secrets' patterns and entropy
 rules, so a secret of an unknown format with low entropy is not found. Untracked files and Git
 history are not scanned.
 

@@ -63,9 +63,9 @@ not merged automatically. It is opened with the workflow's `GITHUB_TOKEN`, and G
 workflow for an event of that token: `homebrewtools-ci.yml` runs on the pull request once a person
 closes and reopens it.
 
-The workflow does not regenerate `.secrets.baseline`: the new `sha256` values are findings of
-`just secrets`, so the gate of its pull request fails until the baseline is regenerated on the
-branch (By hand, step 2).
+The workflow also regenerates `.secrets.baseline` with detect-secrets 1.5.0 (installed with `pipx`) and
+commits it with the formula, so `just secrets` accepts the new `sha256` values. The baseline's diff is
+reviewed in the pull request.
 
 ### By hand
 
