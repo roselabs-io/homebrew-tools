@@ -5,11 +5,14 @@ run-name: "formula update ${{ github.event.client_payload.tool }} ${{ github.eve
 # runs `tools/formula_update.py <tool> <tag>`, which rewrites the four `url` and four `sha256` lines of
 # `Formula/<tool>.rb` from the release's `checksums.txt`, and regenerates `.secrets.baseline` with detect-secrets 1.5.0
 # so that `just secrets` accepts the new `sha256` values. The job commits both files on the branch
-# `formula/<tool>-<tag>` and opens a pull request into `main`; it merges nothing. The job fails when the script
-# fails, and opens no pull request when the formula is already at the tag.
+# `formula/<tool>-<tag>`, opens a pull request into `main` and enables squash auto-merge on it. The job fails when the
+# script fails, and opens no pull request when the formula is already at the tag.
 #
-# The branch is pushed and the pull request opened with `github.token`. GitHub starts no workflow for an event that
-# token causes, so `homebrewtools-ci.yml` does not run on the pull request until a person closes and reopens it.
+# The branch is pushed with `github.token`, which checkout keeps in the git config. The pull request is opened and set
+# to auto-merge with the organization secret `HOMEBREW_TAP_TOKEN`, only in the step that does so: GitHub starts no
+# workflow for an event that `github.token` causes, so `homebrewtools-ci.yml` would not run on a pull request opened
+# with it. The push of a `formula/**` branch starts no workflow. GitHub merges the pull request when the required
+# checks of `main` (`validate`, `Deterministic gate`) pass. Only the branch this job creates is merged this way.
 # `repository_dispatch` runs the workflow file of the default branch.
 
 on:
@@ -55,7 +58,7 @@ jobs:
 
       - name: Open a pull request
         env:
-          GH_TOKEN: ${{ github.token }}
+          GH_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
         run: |
           if git diff --quiet -- "Formula/$TOOL.rb"; then
             echo "Formula/$TOOL.rb is already at $TAG"
@@ -70,3 +73,4 @@ jobs:
           gh pr create --base main --head "$branch" \
             --title "chore($TOOL): update the formula to ${TAG#v}" \
             --body "Formula/$TOOL.rb: the four url and sha256 lines from https://github.com/roselabs-io/$TOOL/releases/download/$TAG/checksums.txt. .secrets.baseline: regenerated with detect-secrets 1.5.0; review its diff."
+          gh pr merge "$branch" --auto --squash

@@ -48,7 +48,7 @@ gh api repos/roselabs-io/homebrew-tools/dispatches \
 
 1. `tools/formula_update.py <tool> <tag>` downloads `https://github.com/roselabs-io/<tool>/releases/download/<tag>/checksums.txt`
    and rewrites the four `url` lines and the four `sha256` lines of `Formula/<tool>.rb`; Homebrew reads the version from the `url`
-2. The job commits the formula on the branch `formula/<tool>-<tag>` and opens a pull request into `main`
+2. The job commits the formula on the branch `formula/<tool>-<tag>`, opens a pull request into `main` and enables squash auto-merge on it
 
 | Condition | Result |
 |---|---|
@@ -58,16 +58,21 @@ gh api repos/roselabs-io/homebrew-tools/dispatches \
 | the formula is already at the tag | no pull request |
 | the branch `formula/<tool>-<tag>` exists | the push fails |
 
-The token that sends the event needs write access to this repository's contents. The pull request is
-not merged automatically. It is opened with the workflow's `GITHUB_TOKEN`, and GitHub starts no
-workflow for an event of that token: `homebrewtools-ci.yml` runs on the pull request once a person
-closes and reopens it.
+The token that sends the event needs write access to this repository's contents. The job pushes the
+branch with the job's `github.token`, then opens the pull request and enables auto-merge with the
+organization secret `HOMEBREW_TAP_TOKEN` (contents and pull-requests write), so that
+`homebrewtools-ci.yml` runs on the pull request. The secret is set only in that last step. GitHub
+merges the pull request into `main` when the required checks (`validate`, `Deterministic gate`) pass,
+and `brew update` then serves the new formula. Only the pull request this workflow opens is merged
+this way; other pull requests are merged by a person. The repository setting "Allow auto-merge" must
+stay on.
 
 The workflow also regenerates `.secrets.baseline` with detect-secrets 1.5.0 (installed with `pipx`) and
 commits it with the formula, so `just secrets` accepts the new `sha256` values. It keeps the
 `generated_at` line of the committed baseline, which detect-secrets rewrites on every scan, so the
 pull requests of two tools change different lines of the baseline and the second merges after the
-first without a conflict. The baseline's diff is reviewed in the pull request.
+first without a conflict. The pull request merges without a person reading the baseline's diff; `validate` and
+`Deterministic gate` (which includes `just secrets`) are the checks.
 
 ### By hand
 

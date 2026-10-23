@@ -16,7 +16,7 @@ the tap's default branch. The rules for the formulae and their update are in Gov
 | `.secrets.baseline` | the detect-secrets findings `just secrets` accepts: the twelve `sha256` values of the formulae, and sixteen `Secret Keyword` findings on the lines of the `secrets` recipe body in `justfile` |
 | `.github/workflows/homebrewtools-ci.yml` | `validate` (PR metadata) and `gate` (`just gate`) |
 | `.github/workflows/homebrewtools-pm.yml` | the issue and board sync of Governor |
-| `.github/workflows/homebrewtools-formula.yml` | on a `repository_dispatch` event `formula-update` (`tool`, `tag`), runs `tools/formula_update.py`, regenerates `.secrets.baseline` and opens a pull request with the formula and the baseline |
+| `.github/workflows/homebrewtools-formula.yml` | on a `repository_dispatch` event `formula-update` (`tool`, `tag`), runs `tools/formula_update.py`, regenerates `.secrets.baseline`, opens a pull request with the formula and the baseline with `HOMEBREW_TAP_TOKEN` and enables squash auto-merge on it |
 | `pipeline.yaml` | the Governor dispatcher's config for this repository; `checks.commands.secrets` runs `just secrets` |
 | `.gitignore` | lists `.data/` |
 | Governor's package preflight (`tools/local_preflight.py` of the Governor package, run by the dispatcher; this repository keeps no copy) | the local check the dispatcher runs: `just check`, then `just gate` |
@@ -99,7 +99,9 @@ organization secret `GOVERNOR_PM_TOKEN`, which a workflow run from a fork does n
 A PR from a branch `agent/<N>-…` carries exactly one `Homebrewtools-Issue: #N` line; a dispatched
 run also requires a `Homebrewtools-Agent` line naming a configured lane. `validate` of
 `homebrewtools-ci.yml` checks both. `homebrewtools-pm.yml` moves issue N on the board from that
-line. `autonomy: gated`: every merge is left to a person.
+line. `autonomy: gated`: every merge is left to a person, except the pull request of a release event: the
+`formula/<tool>-v<X.Y.Z>` pull request `homebrewtools-formula.yml` opens merges itself when `validate` and
+`Deterministic gate` pass.
 
 A merge into `main` publishes the formula to every user of the tap.
 
