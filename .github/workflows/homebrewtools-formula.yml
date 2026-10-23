@@ -37,12 +37,15 @@ jobs:
       - name: Rewrite the formula
         run: python3 -B tools/formula_update.py "$TOOL" "$TAG"
 
+      # A one-line `run:` value: detect-secrets reads `secrets==1.5.0` inside a block scalar as a keyword finding.
+      - name: Install detect-secrets
+        run: pipx install detect-secrets==1.5.0
+
       - name: Regenerate the secret-scan baseline
         run: |
           if git diff --quiet -- "Formula/$TOOL.rb"; then
             exit 0
           fi
-          pipx install detect-secrets==1.5.0
           detect-secrets scan --no-verify --exclude-files '^\.secrets\.baseline$' > .secrets.baseline.new
           mv .secrets.baseline.new .secrets.baseline
 
