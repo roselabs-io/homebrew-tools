@@ -64,8 +64,10 @@ workflow for an event of that token: `homebrewtools-ci.yml` runs on the pull req
 closes and reopens it.
 
 The workflow also regenerates `.secrets.baseline` with detect-secrets 1.5.0 (installed with `pipx`) and
-commits it with the formula, so `just secrets` accepts the new `sha256` values. The baseline's diff is
-reviewed in the pull request.
+commits it with the formula, so `just secrets` accepts the new `sha256` values. It keeps the
+`generated_at` line of the committed baseline, which detect-secrets rewrites on every scan, so the
+pull requests of two tools change different lines of the baseline and the second merges after the
+first without a conflict. The baseline's diff is reviewed in the pull request.
 
 ### By hand
 

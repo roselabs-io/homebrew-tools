@@ -41,12 +41,16 @@ jobs:
       - name: Install detect-secrets
         run: pipx install detect-secrets==1.5.0
 
+      # The `generated_at` line of the committed baseline is kept: detect-secrets rewrites it on every scan, and two
+      # formula pull requests of different tools would otherwise conflict on that line once one of them merges.
       - name: Regenerate the secret-scan baseline
         run: |
           if git diff --quiet -- "Formula/$TOOL.rb"; then
             exit 0
           fi
-          detect-secrets scan --no-verify --exclude-files '^\.secrets\.baseline$' > .secrets.baseline.new
+          generated=$(grep '^  "generated_at": ' .secrets.baseline)
+          detect-secrets scan --no-verify --exclude-files '^\.secrets\.baseline$' \
+            | sed "s|^  \"generated_at\": .*|$generated|" > .secrets.baseline.new
           mv .secrets.baseline.new .secrets.baseline
 
       - name: Open a pull request

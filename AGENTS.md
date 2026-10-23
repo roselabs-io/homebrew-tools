@@ -72,7 +72,8 @@ writes nothing. A new `sha256` value is a finding: a version change regenerates 
 detect-secrets scan --no-verify --exclude-files '^\.secrets\.baseline$' > .secrets.baseline
 ```
 
-and the diff of the baseline is reviewed. `homebrewtools-formula.yml` regenerates the baseline with this command on its branch. The detectors are detect-secrets' patterns and entropy
+and the diff of the baseline is reviewed. `homebrewtools-formula.yml` regenerates the baseline with this command on its branch and keeps the
+baseline's `generated_at` line, so formula pull requests of two tools do not conflict on it. The detectors are detect-secrets' patterns and entropy
 rules, so a secret of an unknown format with low entropy is not found. Untracked files and Git
 history are not scanned.
 
