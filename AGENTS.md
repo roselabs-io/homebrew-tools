@@ -99,9 +99,10 @@ organization secret `GOVERNOR_PM_TOKEN`, which a workflow run from a fork does n
 A PR from a branch `agent/<N>-…` carries exactly one `Homebrewtools-Issue: #N` line; a dispatched
 run also requires a `Homebrewtools-Agent` line naming a configured lane. `validate` of
 `homebrewtools-ci.yml` checks both. `homebrewtools-pm.yml` moves issue N on the board from that
-line. `autonomy: gated`: every merge is left to a person, except the pull request of a release event: the
-`formula/<tool>-v<X.Y.Z>` pull request `homebrewtools-formula.yml` opens merges itself when `validate` and
-`Deterministic gate` pass.
+line. `autonomy: full`: an approved pull request with green CI merges through the merge queue without a
+person (Governor `governor/docs/service/merge-queue.md`, Merge policy), except one whose ticket's metadata
+block says `merge: manual`. The pull request of a release event merges itself when `validate` and
+`Deterministic gate` pass: `homebrewtools-formula.yml` opens it and enables squash auto-merge.
 
 A merge into `main` publishes the formula to every user of the tap.
 
