@@ -12,6 +12,8 @@ the tap's default branch. The rules for the formulae and their update are in Gov
 | Path | Content |
 |---|---|
 | `Formula/sshca.rb`, `Formula/bastionhub.rb`, `Formula/sshboard.rb` | one formula per CLI: `desc`, `homepage`, `license`, one `url` and one `sha256` per platform (macOS and Linux, amd64 and arm64), `depends_on`, `install`, and a `test do` that runs `<tool> --version` |
+| `CLAUDE.md` | the line `@AGENTS.md`, which Claude Code expands to the content of this file |
+| `.gemini/settings.json` | sets `context.fileName` to `AGENTS.md`, the context file Gemini CLI reads (no `GEMINI.md` exists); Codex and OpenCode read `AGENTS.md` natively |
 | `README.md` | install, platforms, the tools, the manual formula update |
 | `.secrets.baseline` | the detect-secrets findings `just secrets` accepts: the twelve `sha256` values of the formulae, and sixteen `Secret Keyword` findings on the lines of the `secrets` recipe body in `justfile` |
 | `.github/workflows/homebrewtools-ci.yml` | `validate` (PR metadata) and `gate` (`just gate`) |
