@@ -23,9 +23,9 @@ the tap's default branch. The rules for the formulae and their update are in Gov
 | `.gitignore` | lists `.data/` |
 | Governor's package preflight (`tools/local_preflight.py` of the Governor package, run by the dispatcher; this repository keeps no copy) | the local check the dispatcher runs: `just check`, then `just gate` |
 | `tools/formula_check.py` | the check of each formula's `url` and `sha256` lines that `just formulae` and `just checksums` run |
-| `tools/test_formula_check.py` | the self-check of `tools/formula_check.py` that `just test` runs: a valid formula has no finding, each malformed one has one |
+| `tools/tests/test_formula_check.py` | the self-check of `tools/formula_check.py` that `just test` runs: a valid formula has no finding, each malformed one has one |
 | `tools/formula_update.py` | rewrites the four `url` and four `sha256` lines of `Formula/<tool>.rb` for a tag `v<X.Y.Z>` from the release's `checksums.txt`; fails when it lacks one of the four archives |
-| `tools/test_formula_update.py` | the self-check of `tools/formula_update.py` that `just test` runs |
+| `tools/tests/test_formula_update.py` | the self-check of `tools/formula_update.py` that `just test` runs |
 
 A formula has no `version` line: `brew audit --strict` reports it as redundant, and Homebrew reads
 the version from the `url` (`.../download/v<version>/<tool>-v<version>-<os>-<arch>.tar.gz`). A
@@ -39,7 +39,7 @@ version change edits the four `url` lines and the four `sha256` lines.
 | `just checksums` | `formulae`, then compares each `sha256` with the release's `checksums.txt`; downloads it, so it is not part of the gate |
 | `just check` | `brew style` of the checkout's tap |
 | `just secrets` | `detect-secrets scan --no-verify` of the tracked files, compared with `.secrets.baseline` |
-| `just test` | `tools/test_formula_check.py` and `tools/test_formula_update.py`, the self-checks of the two scripts, then `brew audit --strict` of each formula of the checkout |
+| `just test` | `tools/tests/test_formula_check.py` and `tools/tests/test_formula_update.py`, the self-checks of the two scripts, then `brew audit --strict` of each formula of the checkout |
 | `just gate` | `formulae`, `check`, `secrets`, then `test`; the deterministic gate CI runs |
 | `just fix` | `brew style --fix` of the checkout's tap |
 | `just ff` | switches to `main` and fast-forwards it from `origin`; refuses local changes or a diverged `main` |

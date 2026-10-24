@@ -48,7 +48,7 @@ check: (with-tap "style")
 
 # Self-checks of tools/formula_check.py and tools/formula_update.py, then `brew audit --strict` of each formula of this checkout.
 test: && (with-tap "audit --strict --tap")
-    python3 -B -m unittest discover -s tools -p 'test_*.py'
+    python3 -B -m unittest discover -s tools/tests -t tools -p 'test_*.py'
 
 # Secret scan of the tracked files with detect-secrets 1.5.0, without the network (`--no-verify`). Each finding
 # whose file, hashed secret and type `.secrets.baseline` does not hold is printed as `path:line: type` and fails the
