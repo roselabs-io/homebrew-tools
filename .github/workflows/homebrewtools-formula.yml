@@ -47,6 +47,7 @@ jobs:
       # The `generated_at` line of the committed baseline is kept: detect-secrets rewrites it on every scan, and two
       # formula pull requests of different tools would otherwise conflict on that line once one of them merges.
       - name: Regenerate the secret-scan baseline
+        shell: bash
         run: |
           if git diff --quiet -- "Formula/$TOOL.rb"; then
             exit 0
