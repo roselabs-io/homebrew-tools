@@ -59,9 +59,11 @@ gh api repos/roselabs-io/homebrew-tools/dispatches \
 | the branch `formula/<tool>-<tag>` exists | the push fails |
 
 The token that sends the event needs write access to this repository's contents. The job pushes the
-branch with the job's `github.token`, then opens the pull request and enables auto-merge with the
-organization secret `HOMEBREW_TAP_TOKEN` (contents and pull-requests write), so that
-`homebrewtools-ci.yml` runs on the pull request. The secret is set only in that last step. GitHub
+branch with the job's `github.token`, then opens the pull request and enables auto-merge with
+`HOMEBREW_TAP_TOKEN` (contents and pull-requests write), so that `homebrewtools-ci.yml` runs on the
+pull request. `HOMEBREW_TAP_TOKEN` is a secret of the shared Bitwarden Secrets Manager project whose id
+is the organization variable `BWS_SHARED_PROJECT_ID`; that last step reads it with `bws run`,
+authenticated by the GitHub Actions secret `BWS_ACCESS_TOKEN`, and is the only step that has it. GitHub
 merges the pull request into `main` when the required checks (`validate`, `Deterministic gate`) pass,
 and `brew update` then serves the new formula. Only the pull request this workflow opens is merged
 this way; other pull requests are merged by a person. The repository setting "Allow auto-merge" must

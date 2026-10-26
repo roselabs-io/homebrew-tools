@@ -18,7 +18,7 @@ the tap's default branch. The rules for the formulae and their update are in Gov
 | `.secrets.baseline` | the detect-secrets findings `just secrets` accepts: the twelve `sha256` values of the formulae, and sixteen `Secret Keyword` findings on the lines of the `secrets` recipe body in `justfile` |
 | `.github/workflows/homebrewtools-ci.yml` | `validate` (PR metadata) and `gate` (`just gate`) |
 | `.github/workflows/homebrewtools-pm.yml` | the issue and board sync of Governor |
-| `.github/workflows/homebrewtools-formula.yml` | on a `repository_dispatch` event `formula-update` (`tool`, `tag`), runs `tools/formula_update.py`, regenerates `.secrets.baseline`, opens a pull request with the formula and the baseline with `HOMEBREW_TAP_TOKEN` and enables squash auto-merge on it |
+| `.github/workflows/homebrewtools-formula.yml` | on a `repository_dispatch` event `formula-update` (`tool`, `tag`), runs `tools/formula_update.py`, regenerates `.secrets.baseline`, opens a pull request with the formula and the baseline with `HOMEBREW_TAP_TOKEN`, read from Bitwarden Secrets Manager with `bws run`, and enables squash auto-merge on it |
 | `pipeline.yaml` | the Governor dispatcher's config for this repository; `checks.commands.secrets` runs `just secrets` |
 | `.gitignore` | lists `.data/` |
 | Governor's package preflight (`tools/local_preflight.py` of the Governor package, run by the dispatcher; this repository keeps no copy) | the local check the dispatcher runs: `just check`, then `just gate` |
@@ -93,8 +93,13 @@ All workflows run on GitHub-hosted `ubuntu-latest`. The repository is public; th
 self-hosted runners do not serve it. The `gate` job sets up Homebrew with
 `Homebrew/actions/setup-homebrew`, which links the checkout as the tap `roselabs-io/tools`. The job
 installs detect-secrets 1.5.0 with `pipx` before `just gate`.
-`validate` and `homebrewtools-pm.yml` check out the private `roselabs-io/governor` with the
-organization secret `GOVERNOR_PM_TOKEN`, which a workflow run from a fork does not receive.
+`validate` and `homebrewtools-pm.yml` check out the private `roselabs-io/governor` with
+`GOVERNOR_PM_TOKEN`. It and `HOMEBREW_TAP_TOKEN` (`homebrewtools-formula.yml`) are secrets of the shared
+Bitwarden Secrets Manager project whose id is the organization variable `BWS_SHARED_PROJECT_ID`. Each
+workflow installs `bws` 2.1.0 (x86_64 Linux, checked against its SHA-256) and reads them with `bws run`,
+authenticated by `BWS_ACCESS_TOKEN`, the only GitHub Actions secret the workflows read besides
+`github.token`. A run from a fork receives no secret: on a fork pull request the PM sync does not run,
+and `validate` skips the steps that read `GOVERNOR_PM_TOKEN` and the marker check.
 
 ## Pull requests
 
