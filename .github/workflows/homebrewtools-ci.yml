@@ -12,7 +12,10 @@ run-name: "${{ inputs.pr_number && format('homebrew-tools CI PR #{0} {1}', input
 # self-hosted runner group does not serve public repositories. `gate` installs `just` and sets up
 # Homebrew with `Homebrew/actions/setup-homebrew`, which points the tap `roselabs-io/tools` at the
 # checkout, before `just gate` (`tools/formula_check.py`, `brew style`, the secret scan, then `brew audit --strict --tap roselabs-io/tools`).
-# A PR from a fork receives no `GOVERNOR_PM_TOKEN`, so its `Check out the Governor package` step fails.
+# `validate` checks out the private Governor package with `GOVERNOR_PM_TOKEN`, read with `bws` from the shared
+# Bitwarden project `vars.BWS_SHARED_PROJECT_ID`, authenticated by the secret `BWS_ACCESS_TOKEN`. A PR from a fork
+# receives no secret: on one, `validate` checks the PR metadata and skips the steps that read the token and the marker
+# check, and `gate` runs.
 
 on:
   pull_request:
@@ -85,23 +88,49 @@ jobs:
             const fs = require("fs");
             fs.writeFileSync(`${process.env.RUNNER_TEMP}/homebrewtools-pr.json`, JSON.stringify(pr));
 
+      # `bws` 2.1.0 for x86_64 Linux, the architecture of `ubuntu-latest`, from the releases of bitwarden/sdk-sm,
+      # checked against its SHA-256 and run from $RUNNER_TEMP.
+      - name: Install bws
+        if: (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository) || inputs.pr_number != ''
+        run: |
+          curl -fsSL -o "$RUNNER_TEMP/bws.zip" https://github.com/bitwarden/sdk-sm/releases/download/bws-v2.1.0/bws-x86_64-unknown-linux-gnu-2.1.0.zip
+          echo "ba8233c3a4aee5d43e3c73bbd04d99e9bc5aba13bbbfd06d89b073abe732b860  $RUNNER_TEMP/bws.zip" | sha256sum --check --quiet
+          python3 -m zipfile -e "$RUNNER_TEMP/bws.zip" "$RUNNER_TEMP/bws"
+          chmod +x "$RUNNER_TEMP/bws/bws"
+          echo "$RUNNER_TEMP/bws" >> "$GITHUB_PATH"
+
+      # Masked, then in the environment of the later steps, where actions/checkout reads it.
+      - name: Read GOVERNOR_PM_TOKEN from Bitwarden Secrets Manager
+        if: (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository) || inputs.pr_number != ''
+        env:
+          BWS_ACCESS_TOKEN: ${{ secrets.BWS_ACCESS_TOKEN }}
+          BWS_PROJECT_ID: ${{ vars.BWS_SHARED_PROJECT_ID }}
+        run: |
+          # The variables expand in the shell `bws run` starts, where the secrets are set.
+          # shellcheck disable=SC2016
+          bws run --project-id "$BWS_PROJECT_ID" -- '
+            test -n "$GOVERNOR_PM_TOKEN" || { echo "::error::GOVERNOR_PM_TOKEN is not in the Bitwarden project $BWS_PROJECT_ID"; exit 1; }
+            echo "::add-mask::$GOVERNOR_PM_TOKEN"
+            echo "GOVERNOR_PM_TOKEN=$GOVERNOR_PM_TOKEN" >> "$GITHUB_ENV"
+          '
+
       - name: Check out the Governor package
-        if: github.event_name == 'pull_request' || inputs.pr_number != ''
+        if: (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository) || inputs.pr_number != ''
         uses: actions/checkout@v7
         with:
           repository: roselabs-io/governor
-          token: ${{ secrets.GOVERNOR_PM_TOKEN }}
+          token: ${{ env.GOVERNOR_PM_TOKEN }}
           path: .governor-package
 
       - name: Install uv
-        if: github.event_name == 'pull_request' || inputs.pr_number != ''
+        if: (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository) || inputs.pr_number != ''
         uses: astral-sh/setup-uv@v10.2.0
         with:
           enable-cache: ${{ runner.environment == 'github-hosted' }}
           cache-dependency-glob: .governor-package/uv.lock
 
       - name: Check branch issue marker
-        if: github.event_name == 'pull_request' || inputs.pr_number != ''
+        if: (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository) || inputs.pr_number != ''
         env:
           PIPELINE_CONFIG: ${{ github.workspace }}/pipeline.yaml
         run: uv run --frozen --no-dev --project .governor-package governor-pr-issue "$RUNNER_TEMP/homebrewtools-pr.json" ${{ github.event_name != 'pull_request' && '--dispatched' || '' }}

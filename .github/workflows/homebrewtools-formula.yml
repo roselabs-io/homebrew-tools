@@ -9,7 +9,9 @@ run-name: "formula update ${{ github.event.client_payload.tool }} ${{ github.eve
 # script fails, and opens no pull request when the formula is already at the tag.
 #
 # The branch is pushed with `github.token`, which checkout keeps in the git config. The pull request is opened and set
-# to auto-merge with the organization secret `HOMEBREW_TAP_TOKEN`, only in the step that does so: GitHub starts no
+# to auto-merge with `HOMEBREW_TAP_TOKEN`, a secret of the shared Bitwarden project whose id is the organization
+# variable `BWS_SHARED_PROJECT_ID`, read with `bws run` (authenticated by the secret `BWS_ACCESS_TOKEN`) only in the
+# step that does so: GitHub starts no
 # workflow for an event that `github.token` causes, so `homebrewtools-ci.yml` would not run on a pull request opened
 # with it. The push of a `formula/**` branch starts no workflow. GitHub merges the pull request when the required
 # checks of `main` (`validate`, `Deterministic gate`) pass. Only the branch this job creates is merged this way.
@@ -57,21 +59,39 @@ jobs:
             | sed "s|^  \"generated_at\": .*|$generated|" > .secrets.baseline.new
           mv .secrets.baseline.new .secrets.baseline
 
+      # `bws` 2.1.0 for x86_64 Linux, the architecture of `ubuntu-latest`, from the releases of bitwarden/sdk-sm,
+      # checked against its SHA-256 and run from $RUNNER_TEMP.
+      - name: Install bws
+        run: |
+          curl -fsSL -o "$RUNNER_TEMP/bws.zip" https://github.com/bitwarden/sdk-sm/releases/download/bws-v2.1.0/bws-x86_64-unknown-linux-gnu-2.1.0.zip
+          echo "ba8233c3a4aee5d43e3c73bbd04d99e9bc5aba13bbbfd06d89b073abe732b860  $RUNNER_TEMP/bws.zip" | sha256sum --check --quiet
+          python3 -m zipfile -e "$RUNNER_TEMP/bws.zip" "$RUNNER_TEMP/bws"
+          chmod +x "$RUNNER_TEMP/bws/bws"
+          echo "$RUNNER_TEMP/bws" >> "$GITHUB_PATH"
+
       - name: Open a pull request
         env:
-          GH_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+          BWS_ACCESS_TOKEN: ${{ secrets.BWS_ACCESS_TOKEN }}
+          BWS_PROJECT_ID: ${{ vars.BWS_SHARED_PROJECT_ID }}
         run: |
           if git diff --quiet -- "Formula/$TOOL.rb"; then
             echo "Formula/$TOOL.rb is already at $TAG"
             exit 0
           fi
-          branch="formula/$TOOL-$TAG"
-          git switch -c "$branch"
-          git add "Formula/$TOOL.rb" .secrets.baseline
-          git -c user.name=github-actions[bot] -c user.email=41898282+github-actions[bot]@users.noreply.github.com \
-            commit -m "chore($TOOL): update the formula to ${TAG#v}"
-          git push origin "$branch"
-          gh pr create --base main --head "$branch" \
-            --title "chore($TOOL): update the formula to ${TAG#v}" \
-            --body "Formula/$TOOL.rb: the four url and sha256 lines from https://github.com/roselabs-io/$TOOL/releases/download/$TAG/checksums.txt. .secrets.baseline: regenerated with detect-secrets 1.5.0; review its diff."
-          gh pr merge "$branch" --auto --squash
+          # `bws run` runs the script with `sh -c`, where the secrets are set; the variables expand there.
+          # shellcheck disable=SC2016
+          bws run --project-id "$BWS_PROJECT_ID" -- '
+            set -e
+            test -n "$HOMEBREW_TAP_TOKEN" || { echo "::error::HOMEBREW_TAP_TOKEN is not in the Bitwarden project $BWS_PROJECT_ID"; exit 1; }
+            export GH_TOKEN="$HOMEBREW_TAP_TOKEN"
+            branch="formula/$TOOL-$TAG"
+            git switch -c "$branch"
+            git add "Formula/$TOOL.rb" .secrets.baseline
+            git -c user.name=github-actions[bot] -c user.email=41898282+github-actions[bot]@users.noreply.github.com \
+              commit -m "chore($TOOL): update the formula to ${TAG#v}"
+            git push origin "$branch"
+            gh pr create --base main --head "$branch" \
+              --title "chore($TOOL): update the formula to ${TAG#v}" \
+              --body "Formula/$TOOL.rb: the four url and sha256 lines from https://github.com/roselabs-io/$TOOL/releases/download/$TAG/checksums.txt. .secrets.baseline: regenerated with detect-secrets 1.5.0; review its diff."
+            gh pr merge "$branch" --auto --squash
+          '

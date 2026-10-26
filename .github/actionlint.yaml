@@ -1,0 +1,4 @@
+# The configuration variables the workflows read. `brew style` runs actionlint with this file in place of Homebrew's
+# own `.github/actionlint.yaml`.
+config-variables:
+  - BWS_SHARED_PROJECT_ID
