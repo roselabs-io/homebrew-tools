@@ -19,6 +19,7 @@ the tap's default branch. The rules for the formulae and their update are in Gov
 | `.github/workflows/homebrewtools-ci.yml` | `validate` (PR metadata) and `gate` (`just gate`) |
 | `.github/workflows/homebrewtools-pm.yml` | the issue and board sync of Governor |
 | `.github/workflows/homebrewtools-formula.yml` | on a `repository_dispatch` event `formula-update` (`tool`, `tag`), runs `tools/formula_update.py`, regenerates `.secrets.baseline`, opens a pull request with the formula and the baseline with `HOMEBREW_TAP_TOKEN`, read from Bitwarden Secrets Manager with `bws run`, and enables squash auto-merge on it |
+| `.github/actionlint.yaml` | the configuration variables the workflows read (`BWS_SHARED_PROJECT_ID`); `brew style` runs actionlint with it in place of Homebrew's own configuration |
 | `pipeline.yaml` | the Governor dispatcher's config for this repository; `checks.commands.secrets` runs `just secrets` |
 | `.gitignore` | lists `.data/` |
 | Governor's package preflight (`tools/local_preflight.py` of the Governor package, run by the dispatcher; this repository keeps no copy) | the local check the dispatcher runs: `just check`, then `just gate` |
